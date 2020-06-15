@@ -11,5 +11,16 @@
 
     <artifactId>rabbit-core-producer</artifactId>
 
+    <dependencies>
+
+        <dependency>
+            <groupId>com.ccarlos.base.rabbit</groupId>
+            <artifactId>rabbit-common</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
+
+    </dependencies>
+
 
 </project>
