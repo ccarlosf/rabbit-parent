@@ -11,6 +11,7 @@ import com.ccarlos.rabbit.common.convert.RabbitMessageConverter;
 import com.ccarlos.rabbit.common.serializer.Serializer;
 import com.ccarlos.rabbit.common.serializer.SerializerFactory;
 import com.ccarlos.rabbit.common.serializer.impl.JacksonSerializerFactory;
+import com.ccarlos.rabbit.producer.service.MessageStoreService;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -43,6 +44,9 @@ public class RabbitTemplateContainer implements RabbitTemplate.ConfirmCallback {
 
     @Autowired
     private ConnectionFactory connectionFactory;
+
+    @Autowired
+    private MessageStoreService messageStoreService;
 
     public RabbitTemplate getTemplate(Message message) throws MessageRunTimeException {
         Preconditions.checkNotNull(message);
@@ -85,6 +89,8 @@ public class RabbitTemplateContainer implements RabbitTemplate.ConfirmCallback {
         String messageId = strings.get(0);
         long sendTime = Long.parseLong(strings.get(1));
         if (ack) {
+            //	当Broker 返回ACK成功时, 就是更新一下日志表里对应的消息发送状态为 SEND_OK
+            this.messageStoreService.succuess(messageId);
             log.info("send message is OK, confirm messageId: {}, sendTime: {}", messageId, sendTime);
         } else {
             log.error("send message is Fail, confirm messageId: {}, sendTime: {}", messageId, sendTime);
