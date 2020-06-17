@@ -57,13 +57,20 @@ public class RabbitBrokerImpl implements RabbitBroker {
             RabbitTemplate rabbitTemplate = rabbitTemplateContainer.getTemplate(message);
             rabbitTemplate.convertAndSend(topic, routingKey, message, correlationData);
             log.info("#RabbitBrokerImpl.sendKernel# send to rabbitmq, messageId: {}", message.getMessageId());
-
         });
     }
 
+    /**
+     * @description: 发送确认消息
+     * @author: ccarlos
+     * @date: 2020/6/17 20:33
+     * @param: message
+     * @return: void
+     */
     @Override
     public void confirmSend(Message message) {
-
+        message.setMessageType(MessageType.CONFIRM);
+        sendKernel(message);
     }
 
     @Override
