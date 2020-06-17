@@ -6,6 +6,11 @@ import java.util.Map;
 import com.ccarlos.rabbit.api.Message;
 import com.ccarlos.rabbit.api.MessageType;
 import com.ccarlos.rabbit.api.exception.MessageRunTimeException;
+import com.ccarlos.rabbit.common.convert.GenericMessageConverter;
+import com.ccarlos.rabbit.common.convert.RabbitMessageConverter;
+import com.ccarlos.rabbit.common.serializer.Serializer;
+import com.ccarlos.rabbit.common.serializer.SerializerFactory;
+import com.ccarlos.rabbit.common.serializer.impl.JacksonSerializerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -34,6 +39,8 @@ public class RabbitTemplateContainer implements RabbitTemplate.ConfirmCallback {
 
     private Splitter splitter = Splitter.on("#");
 
+    private SerializerFactory serializerFactory = JacksonSerializerFactory.INSTANCE;
+
     @Autowired
     private ConnectionFactory connectionFactory;
 
@@ -52,7 +59,10 @@ public class RabbitTemplateContainer implements RabbitTemplate.ConfirmCallback {
         newTemplate.setRetryTemplate(new RetryTemplate());
 
         // 对于message的序列化方式
-        // newTemplate.setMessageConverter(messageConverter);
+        Serializer serializer = serializerFactory.create();
+        GenericMessageConverter gmc = new GenericMessageConverter(serializer);
+        RabbitMessageConverter rmc = new RabbitMessageConverter(gmc);
+        newTemplate.setMessageConverter(rmc);
 
         String messageType = message.getMessageType();
         if (!MessageType.RAPID.equals(messageType)) {
