@@ -14,13 +14,17 @@ import com.dangdang.ddframe.job.lite.config.LiteJobConfiguration;
 import com.dangdang.ddframe.job.lite.spring.api.SpringJobScheduler;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperRegistryCenter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.support.ManagedList;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.util.StringUtils;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -141,10 +145,50 @@ public class ElasticJobConfParser implements ApplicationListener<ApplicationRead
                 }
 
                 //  5.添加监听
+                List<?> elasticJobListeners = getTargetElasticJobListeners(conf);
+                factory.addConstructorArgValue(elasticJobListeners);
+
+                // 	接下来就是把factory 也就是 SpringJobScheduler注入到Spring容器中
+                DefaultListableBeanFactory defaultListableBeanFactory =
+                        (DefaultListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
+
+                String registerBeanName = conf.name() + "SpringJobScheduler";
+                defaultListableBeanFactory.registerBeanDefinition
+                        (registerBeanName, factory.getBeanDefinition());
+                SpringJobScheduler scheduler = (SpringJobScheduler)
+                        applicationContext.getBean(registerBeanName);
+                scheduler.init();
+                log.info("启动elastic-job作业: " + jobName);
             }
+            log.info("共计启动elastic-job作业数量为: {} 个", beanMap.values().size());
 
         } catch (Exception e) {
+            log.error("elasticjob 启动异常, 系统强制退出", e);
+            System.exit(1);
         }
+    }
+
+    private List<BeanDefinition> getTargetElasticJobListeners(ElasticJobConfig conf) {
+        List<BeanDefinition> result = new ManagedList<BeanDefinition>(2);
+        String listeners = conf.listener();
+        if (StringUtils.hasText(listeners)) {
+            BeanDefinitionBuilder factory = BeanDefinitionBuilder.rootBeanDefinition(listeners);
+            factory.setScope("prototype");
+            result.add(factory.getBeanDefinition());
+        }
+
+        String distributedListeners = conf.distributedListener();
+        long startedTimeoutMilliseconds = conf.startedTimeoutMilliseconds();
+        long completedTimeoutMilliseconds = conf.completedTimeoutMilliseconds();
+
+        if (StringUtils.hasText(distributedListeners)) {
+            BeanDefinitionBuilder factory = BeanDefinitionBuilder.rootBeanDefinition(distributedListeners);
+            factory.setScope("prototype");
+            factory.addConstructorArgValue(Long.valueOf(startedTimeoutMilliseconds));
+            factory.addConstructorArgValue(Long.valueOf(completedTimeoutMilliseconds));
+            result.add(factory.getBeanDefinition());
+        }
+        return result;
     }
 
 }
