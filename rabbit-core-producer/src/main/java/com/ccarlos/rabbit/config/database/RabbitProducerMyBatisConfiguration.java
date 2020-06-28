@@ -27,7 +27,9 @@ public class RabbitProducerMyBatisConfiguration {
 		bean.setDataSource(rabbitProducerDataSource);
 		ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 		try {
-			bean.setMapperLocations(resolver.getResources("classpath:com/ccarlos/rabbit/producer/mapping/*.xml"));
+//			bean.setMapperLocations(resolver.getResources("classpath:com/ccarlos/rabbit/producer/mapping/*.xml"));
+//			bean.setMapperLocations(resolver.getResources("classpath:com.ccarlos.rabbit.producer.mapping.*.xml"));
+			bean.setMapperLocations(resolver.getResources("classpath:mapping/*.xml"));
 			SqlSessionFactory sqlSessionFactory = bean.getObject();
 			sqlSessionFactory.getConfiguration().setCacheEnabled(Boolean.TRUE);
 			return sqlSessionFactory;
