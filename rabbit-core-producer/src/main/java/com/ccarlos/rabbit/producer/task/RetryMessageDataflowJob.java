@@ -34,11 +34,29 @@ public class RetryMessageDataflowJob implements DataflowJob<BrokerMessage> {
 
     @Override
     public List<BrokerMessage> fetchData(ShardingContext shardingContext) {
-    	return null;
+        List<BrokerMessage> list = messageStoreService.fetchTimeOutMessage4Retry
+                (BrokerMessageStatus.SENDING);
+        log.info("--------@@@@@ 抓取数据集合, 数量：	{} 	@@@@@@-----------", list.size());
+        return list;
     }
 
     @Override
     public void processData(ShardingContext shardingContext, List<BrokerMessage> dataList) {
+
+        dataList.forEach(brokerMessage -> {
+
+            String messageId = brokerMessage.getMessageId();
+            if (brokerMessage.getTryCount() >= MAX_RETRY_COUNT) {
+                this.messageStoreService.failure(messageId);
+                log.warn(" -----消息设置为最终失败，消息ID: {} -------", messageId);
+            } else {
+                //	每次重发的时候要更新一下try count字段
+                this.messageStoreService.updateTryCount(messageId);
+                // 	重发消息
+                this.rabbitBroker.reliantSend(brokerMessage.getMessage());
+            }
+
+        });
     }
 
 
